@@ -32,7 +32,7 @@ import {
   Download,
 } from 'lucide-react';
 // Toast notifications removed per user request
-// import { toast } from 'sonner'
+import { toast } from 'sonner'
 import { User } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -676,7 +676,7 @@ export default function NotebookPage() {
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-
+          toast.error(`Upload failed: ${uploadError.message}`);
           setUploading(false);
           return;
         }
@@ -698,7 +698,9 @@ export default function NotebookPage() {
 
         if (error) {
           console.error('Source creation error:', error);
+          toast.error(`Source creation failed: ${error.message}`);
         } else {
+          toast.success('File uploaded successfully');
           invalidate.invalidateSources(notebookId);
         }
       }
