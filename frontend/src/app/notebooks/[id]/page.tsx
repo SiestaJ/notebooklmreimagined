@@ -664,41 +664,30 @@ export default function NotebookPage() {
     setUploading(true);
 
     if (type === 'file') {
-      // Handle file upload - file is passed from the sources panel
+      // Handle file upload via API route (uses service role key for storage access)
       const file = data.file;
       if (file) {
-        const fileExt = file.name.split('.').pop()?.toLowerCase();
-        const filePath = `${user?.id}/${notebookId}/${Date.now()}.${fileExt}`;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        const { error: uploadError } = await supabase.storage
-          .from('sources')
-          .upload(filePath, file);
+        const formData = new FormData();
+        formData.append('type', 'file');
+        formData.append('file', file);
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          toast.error(`Upload failed: ${uploadError.message}`);
-          setUploading(false);
-          return;
-        }
+        const res = await fetch(`/api/notebooks/${notebookId}/sources`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: formData,
+        });
 
-        const { data: sourceData, error } = await supabase
-          .from('sources')
-          .insert({
-            notebook_id: notebookId,
-            type: fileExt === 'pdf' ? 'pdf' : fileExt === 'docx' ? 'docx' : 'txt',
-            name: file.name,
-            status: 'ready',
-            file_path: filePath,
-            original_filename: file.name,
-            mime_type: file.type,
-            file_size_bytes: file.size,
-          })
-          .select()
-          .single();
+        const result = await res.json();
 
-        if (error) {
-          console.error('Source creation error:', error);
-          toast.error(`Source creation failed: ${error.message}`);
+        if (!res.ok) {
+          console.error('Upload error:', result.error);
+          toast.error(`Upload failed: ${result.error || 'Unknown error'}`);
         } else {
           toast.success('File uploaded successfully');
           invalidate.invalidateSources(notebookId);
